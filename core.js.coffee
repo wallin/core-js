@@ -86,7 +86,7 @@ window.CORE = do () ->
       return
 
     log: (message, severity = 1) ->
-      console[if severity == 1 then 'log' else if severity == 2 then 'warn' else 'error'](message) if debug and console?.log
+      console[if severity is 1 then 'log' else if severity is 2 then 'warn' else 'error'](message) if debug and console?.log
     debug: (state) -> debug = state
     trace: -> return eventTrace
     traceFilter: (regexp) -> eventTraceFilter = regexp
@@ -97,15 +97,25 @@ window.CORE = do () ->
 class window.Sandbox
   constructor: (@core, @moduleID, probe) ->
     return if probe
-    @el = $("##{@moduleID}")
-    @log "WARNING : No matching DOM element found for module", 2 unless @el.length > 0
-  $: (selector) -> $(selector, @el)
-  ajax: $.ajax
+    p.apply(@) for n, p of @plugins when typeof p is 'function'
+  plugins: {}
   notify: (evt, args...) -> @core.notify(evt, args...) if evt
   listen: (evts) -> @core.listen(evts, @moduleID) if evts
   ignore: (evts) -> @core.ignore(evts, @moduleID) if evts
   log: (message, severity) ->
-    if typeof message == 'string'
+    if typeof message is 'string'
       @core.log "#{@moduleID}: #{message}", severity
     else
       @core.log message, severity
+
+# jQuery extension
+if window.jQuery
+  $ = window.jQuery
+  s = window.Sandbox
+  # Extend with som jQuery helpers
+  s::$ = (selector) -> $(selector, @el)
+  s::ajax = $.ajax
+  # Provide an instance attribute with jQuery element for module ID
+  s::plugins.jQuery = ->
+    @el = $("##{@moduleID}")
+    @log "WARNING : No matching DOM element found for module", 2 unless @el.length > 0
